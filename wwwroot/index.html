@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
+    <title>Boots and Cats</title>
+
+    <script type="text/javascript"
+        src="https://code.jquery.com/jquery-1.6.4.min.js"></script>
+    <script type="text/javascript"
+        src="https://ajax.aspnetcdn.com/ajax/signalr/jquery.signalr-2.0.3.min.js"></script>
+    <script type="text/javascript" src="/signalr/hubs"></script>
+    <script type="text/javascript">
+        var currentId;
+        var bootsCats = [];
+        $(document).ready(function () {
+		
+			function clickableGrid( rows, cols, callback ){
+				var i=0;
+				var grid = document.createElement('table');
+				grid.className = 'grid';
+				for (var r=0;r<rows;++r){
+					var tr = grid.appendChild(document.createElement('tr'));
+					for (var c=0;c<cols;++c){
+					var cell = tr.appendChild(document.createElement('td'));
+					if(bootsCats.length > i){
+						cell.innerHTML = "<img src='" + bootsCats[i] + "' alt='' width=100 height=100 />";
+						cell.style.display = 'inline';
+					}else{
+						cell.style.display = 'none';
+					}
+					i=i+1;
+					cell.addEventListener('click',(function(el,r,c,i){
+						return function(){ callback(el,r,c,i); }
+					})(cell,r,c,i),false);
+					}
+				}
+				return grid;
+			}
+
+			function refreshGrid(){
+				var grid = clickableGrid(10,10,function(el,row,col,i){
+				});
+				document.getElementById("gameGrid").innerHTML = "";
+				document.getElementById("gameGrid").appendChild(grid);
+			}
+			refreshGrid();
+		
+            //SignalR Hub:
+            var myHub;
+            $.connection.hub.url = "/signalr";
+            myHub = $.connection.catsHub; //Hub class
+            if (!myHub) console.log("hub not found");
+
+            myHub.client.newQuiz = function (data) {
+                currentId = data.QuizId;
+                question.innerHTML = "Which country has the capital city of " + data.Capital +"?";
+                $("#btn1").val(data.Countries[0]);
+                $("#btn2").val(data.Countries[1]);
+                $("#btn3").val(data.Countries[2]);
+            };
+
+            myHub.client.informResult = function (data) {
+                if (data == "Correct!") {
+					let pic = "cat" + (Math.floor((Math.random() * 6) + 1)) + ".jpg";
+					bootsCats.push(pic);
+					}
+                else {
+					//alert(data);
+					let pic = "boot" + (Math.floor((Math.random() * 3) + 1)) + ".jpg";
+					bootsCats.push(pic);
+				}
+				refreshGrid();
+            };
+
+            $.connection.hub.logging = true;
+            $.connection.hub.start().
+                done(function () {
+                    $("#btn1").click(function () {
+                        myHub.server.guessCountry(currentId, $("#btn1").val());
+                        return false;
+                    });
+                    $("#btn2").click(function () {
+                        myHub.server.guessCountry(currentId, $("#btn2").val());
+                        return false;
+                    });
+                    $("#btn3").click(function () {
+                        myHub.server.guessCountry(currentId, $("#btn3").val());
+                        return false;
+                    });
+                });
+        });
+    </script>
+    <style>
+        .bgFrame {
+            background-color: #ffffff;
+            border: thin solid #000000;
+            padding: 30px;
+            margin: 30px;
+            width: 600px;
+            min-height: 800px;
+            vertical-align: middle;
+            text-align: center;
+        }
+        .grid { margin:1em auto; border-collapse:collapse }
+        .grid td {
+            cursor:pointer;
+            width:60px; height:60px;
+            border:1px solid #ccc;
+            text-align:center;
+            font-family:sans-serif; font-size:13px
+        }
+        .grid td.clicked {
+            background-color:yellow;
+            font-weight:bold; color:red;
+        }
+		#question{
+			font-family:sans-serif; font-size:24px
+		}
+		input{
+			font-family:sans-serif; font-size:24px
+		}
+    </style>
+</head>
+
+<body style="background-color: #46c0b7">
+    <div class="bgFrame">
+        <h2>Boots and Cats</h2><br />
+        <form method="post" action="index.html">
+
+            <div id="question"></div><br />
+            <input type="button" id="btn1" />
+            <input type="button" id="btn2" />
+            <input type="button" id="btn3" />
+            <br /><br /><br />
+            <b id="correctDisplay"></b>          
+
+			<div id="gameGrid">            
+        </form>
+    </div>
+
+</body>
+</html>
